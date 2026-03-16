@@ -1,7 +1,24 @@
-# placeholder for PQC client using custom TLS groups
+import time
+from gateway.core.gateway import QuantumTLSGateway
 
 def run():
-    print("PQC client request")
+    # Crear instancia del gateway con el proveedor OpenSSL OQS
+    provider = OpenSSLOQSProvider()
+    gateway = QuantumTLSGateway(provider)
+
+    # Medir la latencia de ida y vuelta
+    start_time = time.time()
+    gateway.send_request("https://localhost")
+    end_time = time.time()
+
+    latency_ms = (end_time - start_time) * 1000
+
+    # Devolver las métricas del benchmark
+    return RequestMetrics(latency_ms, "OpenSSL OQS")
 
 if __name__ == "__main__":
-    run()
+    metrics = run()
+    print(f"Latency Metrics:")
+    print(f"{'Provider':<20} {'Latency (ms)':<15}")
+    print("-" * 38)
+    print(f"{metrics.provider_name:<20} {metrics.latency_ms:<15.2f}")
