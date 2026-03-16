@@ -22,8 +22,8 @@ def benchmark():
     print("\nLatency Metrics:")
     print(f"{'Client':<20} {'Latency (ms)':<15}")
     print("-" * 38)
-    print(f"Classical TLS:<20} {classical_latency_ms:<15.2f}")
-    print(f"PQC TLS:<20} {pqc_latency_ms:<15.2f}")
+    print(f"Classical TLS:<20 {classical_latency_ms:<15.2f}")
+    print(f"PQC TLS:<20 {pqc_latency_ms:<15.2f}")
 
 if __name__ == "__main__":
     benchmark()
