@@ -1,5 +1,7 @@
 import time
 from gateway.core.gateway import QuantumTLSGateway
+from gateway.core.metrics import RequestMetrics
+from gateway.providers.openssl_oqs.provider import OpenSSLOQSProvider
 
 def run():
     # Crear instancia del gateway con el proveedor OpenSSL OQS
