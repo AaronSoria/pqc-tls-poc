@@ -1,4 +1,5 @@
 from gateway.core.crypto_provider_interface import CryptoProvider
+import time
 
 class OpenSSLOQSProvider(CryptoProvider):
 
@@ -9,4 +10,14 @@ class OpenSSLOQSProvider(CryptoProvider):
         print("Sending request via OpenSSL OQS")
 
     def get_metrics(self):
-        return {}
+        # Simulación de una negociación TLS
+        start_time = time.time()
+        # Placeholder para la simulación de la negociación TLS
+        time.sleep(0.1)  # Simula un retraso de 100 ms
+        end_time = time.time()
+
+        latency_ms = (end_time - start_time) * 1000
+        cipher_suite = "ECDHE-OQS"
+        key_exchange = "OQS-KEM"
+
+        return HandshakeMetrics(latency_ms, cipher_suite, key_exchange)
