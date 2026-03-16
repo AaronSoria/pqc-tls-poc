@@ -1,6 +1,6 @@
 import time
-from client.classical_client import run as classical_run
-from client.pqc_client import run as pqc_run
+from ..client.classical_client import run as classical_run
+from ..client.pqc_client import run as pqc_run
 
 def benchmark():
     start = time.time()
