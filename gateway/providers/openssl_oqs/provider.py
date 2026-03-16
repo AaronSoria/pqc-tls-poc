@@ -1,5 +1,6 @@
 from gateway.core.crypto_provider_interface import CryptoProvider
 import time
+from gateway.core.metrics import HandshakeMetrics
 
 class OpenSSLOQSProvider(CryptoProvider):
 
