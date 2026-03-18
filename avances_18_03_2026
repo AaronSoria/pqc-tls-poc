@@ -1,0 +1,282 @@
+# 📘 Bitácora de Desarrollo – Evaluación de TLS Clásico vs Post-Cuántico
+
+## 👤 Autor
+
+Luis Aaron Maximiliano Soria
+
+## 🎓 Contexto
+
+Prácticas del Máster en Computación Cuántica – UNIR
+
+## 🧠 Proyecto
+
+**Evaluación experimental del rendimiento de TLS clásico vs TLS post-cuántico (PQC)**
+
+---
+
+# 📅 Registro de Avances
+
+---
+
+## 🔹 Fase 1 – Configuración de Agente Local
+
+### 🎯 Objetivo
+
+Acelerar el desarrollo del proyecto mediante un agente inteligente capaz de asistir en la implementación, debugging y estructuración del sistema.
+
+### ⚙️ Acciones realizadas
+
+* Definición de prompts estructurados para guiar al agente
+* Establecimiento de un contexto técnico persistente:
+
+  * uso de Docker
+  * compilación de OpenSSL
+  * integración de liboqs
+* Creación de lineamientos para evitar inconsistencias:
+
+  * control de dependencias
+  * instrucciones explícitas de build
+  * delimitación de responsabilidades por módulo
+
+### 🧠 Resultado
+
+```text
+✔ Desarrollo más rápido
+✔ Menor tasa de errores de integración
+✔ Mejor organización del código
+```
+
+---
+
+## 🔹 Fase 2 – Entorno Reproducible con Docker
+
+### 🎯 Objetivo
+
+Construir un entorno reproducible que permita comparar distintos tipos de criptografía TLS bajo condiciones controladas.
+
+---
+
+### 🏗️ Arquitectura del sistema
+
+```text
+[ benchmark ]
+     |
+     |--- classical-server (TLS clásico)
+     |
+     |--- oqs-server (TLS híbrido PQC)
+```
+
+---
+
+### ⚙️ Componentes implementados
+
+---
+
+### 🔸 1. Servidor TLS Clásico
+
+* Basado en Alpine Linux
+* Uso de OpenSSL estándar
+* Generación automática de certificados
+* Ejecución mediante `openssl s_server`
+
+---
+
+### 🔸 2. Servidor TLS Post-Cuántico (oqs-server)
+
+Implementación completa desde cero:
+
+* OpenSSL compilado manualmente
+* Integración de:
+
+  * liboqs
+  * oqs-provider
+* Configuración de providers dinámicos en OpenSSL
+
+---
+
+### 🔥 Características clave
+
+```text
+✔ Soporte para TLS híbrido
+✔ Grupo utilizado: X25519MLKEM768
+✔ Integración con OpenSSL 3 (provider architecture)
+✔ Ejecución en contenedores Docker
+```
+
+---
+
+### 🧪 Problemas técnicos y soluciones
+
+---
+
+#### 🔴 Problema: OpenSSL no encontraba librerías
+
+**Solución:**
+
+* uso de `--libdir=lib`
+* ejecución de `make install_dev`
+* configuración de `LD_LIBRARY_PATH`
+
+---
+
+#### 🔴 Problema: oqs-provider no cargaba
+
+**Solución:**
+
+* definición de:
+
+  ```bash
+  OPENSSL_MODULES=/usr/local/lib/ossl-modules
+  ```
+* configuración explícita en `openssl.cnf`
+
+---
+
+#### 🔴 Problema: grupos PQC no reconocidos
+
+**Solución:**
+
+* uso de grupos híbridos válidos:
+
+  ```text
+  X25519MLKEM768
+  ```
+
+---
+
+#### 🔴 Problema: servidores se cerraban tras una conexión
+
+**Solución:**
+
+* uso de flags:
+
+  ```text
+  -www
+  -ign_eof
+  ```
+
+---
+
+#### 🔴 Problema: sincronización entre contenedores
+
+**Solución:**
+
+* implementación de espera activa mediante `netcat`
+* verificación de disponibilidad de servicios antes de ejecutar el benchmark
+
+---
+
+### 🧠 Resultado
+
+```text
+✔ Infraestructura completamente funcional
+✔ TLS clásico y PQC ejecutándose en paralelo
+✔ Entorno reproducible y portable
+```
+
+---
+
+## 🔹 Fase 3 – Benchmark y Métricas
+
+### 🎯 Objetivo
+
+Medir el impacto en rendimiento del uso de criptografía post-cuántica en el handshake TLS.
+
+---
+
+### ⚙️ Implementación
+
+---
+
+### 🔸 Cliente TLS Clásico
+
+* Implementado en Python
+* Uso de `ssl` estándar
+* Medición de handshake real
+
+---
+
+### 🔸 Cliente TLS PQC
+
+* Uso de `openssl s_client`
+* Ejecución mediante subprocess en Python
+* Soporte para:
+
+  * providers dinámicos
+  * grupos híbridos PQC
+
+---
+
+### 📊 Resultados obtenidos
+
+```text
+Provider             Latency (ms)
+--------------------------------------
+Classical TLS        2.04
+PQC TLS              3.56
+```
+
+---
+
+### 📈 Análisis
+
+#### 🔸 Overhead observado
+
+```text
+≈ +1.52 ms
+≈ +74% respecto a TLS clásico
+```
+
+---
+
+### 🧠 Interpretación técnica
+
+El incremento en latencia se debe a:
+
+* Mayor complejidad computacional de los algoritmos PQC (ML-KEM)
+* Mayor tamaño de claves y mensajes
+* Uso de implementación basada en providers dinámicos (no optimizada)
+
+---
+
+### ⚠️ Limitaciones actuales
+
+* Entorno local (Docker, sin red real)
+* Bajo número de iteraciones
+* Sin pruebas de concurrencia
+* Sin medición de uso de CPU/memoria
+
+---
+
+## 🧩 Estado Actual del Proyecto
+
+```text
+✔ Entorno TLS clásico funcional
+✔ Entorno TLS PQC funcional
+✔ Benchmark implementado correctamente
+✔ Métricas iniciales obtenidas
+```
+
+
+## 🏁 Conclusión
+
+Se logró implementar exitosamente un entorno experimental reproducible para comparar TLS clásico y TLS post-cuántico.
+
+Los resultados obtenidos evidencian un incremento medible en la latencia del handshake al utilizar criptografía post-cuántica, lo cual es consistente con las características conocidas de estos algoritmos.
+
+Este trabajo constituye una base sólida para análisis más profundos sobre el impacto del PQC en sistemas reales.
+
+---
+
+## 📌 Nota Final
+
+El desarrollo realizado implicó:
+
+* compilación de toolchains criptográficos desde cero
+* integración de providers dinámicos en OpenSSL
+* debugging a nivel de protocolo TLS
+* diseño de experimentos reproducibles
+
+Lo cual representa un avance técnico significativo en el contexto de evaluación práctica de criptografía post-cuántica.
+
+---

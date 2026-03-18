@@ -1,29 +1,26 @@
-import time
 from client.classical_client import run as classical_run
 from client.pqc_client import run as pqc_run
 
+
 def benchmark():
-    start = time.time()
-    # Ejecutar cliente clásico
-    classical_start = time.time()
-    classical_run()
-    classical_end = time.time()
-    classical_latency_ms = (classical_end - classical_start) * 1000
+    print("Running real TLS benchmark...\n")
 
-    # Ejecutar cliente PQC
-    pqc_start = time.time()
-    pqc_run()
-    pqc_end = time.time()
-    pqc_latency_ms = (pqc_end - pqc_start) * 1000
+    c = classical_run()
+    p = pqc_run()
 
-    end = time.time()
+    print(f"{'Provider':<20} {'Latency (ms)':<15}")
+    print("-" * 35)
 
-    print("Benchmark duration:", end - start)
-    print("\nLatency Metrics:")
-    print(f"{'Client':<20} {'Latency (ms)':<15}")
-    print("-" * 38)
-    print(f"Classical TLS:<20 {classical_latency_ms:<15.2f}")
-    print(f"PQC TLS:<20 {pqc_latency_ms:<15.2f}")
+    if c is not None:
+        print(f"{'Classical TLS':<20} {c:<15.2f}")
+    else:
+        print(f"{'Classical TLS':<20} ERROR")
+
+    if p is not None:
+        print(f"{'PQC TLS':<20} {p:<15.2f}")
+    else:
+        print(f"{'PQC TLS':<20} ERROR")
+
 
 if __name__ == "__main__":
     benchmark()

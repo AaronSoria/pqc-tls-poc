@@ -1,26 +1,36 @@
+import subprocess
 import time
-from gateway.core.gateway import QuantumTLSGateway
-from gateway.core.metrics import RequestMetrics
-from gateway.providers.openssl_oqs.provider import OpenSSLOQSProvider
 
-def run():
-    # Crear instancia del gateway con el proveedor OpenSSL OQS
-    provider = OpenSSLOQSProvider()
-    gateway = QuantumTLSGateway(provider)
 
-    # Medir la latencia de ida y vuelta
-    start_time = time.time()
-    gateway.send_request("https://localhost")
-    end_time = time.time()
+def run(host="oqs-server", port=9443, iterations=5):
+    times = []
 
-    latency_ms = (end_time - start_time) * 1000
+    for _ in range(iterations):
+        start = time.time()
 
-    # Devolver las métricas del benchmark
-    return RequestMetrics(latency_ms, "OpenSSL OQS")
+        try:
+            subprocess.run(
+                [
+                    "openssl",
+                    "s_client",
+                    "-connect", f"{host}:{port}",
+                    "-groups", "X25519MLKEM768",
+                    "-provider", "default",
+                    "-provider", "oqsprovider"
+                ],
+                input=b"Q",
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5
+            )
 
-if __name__ == "__main__":
-    metrics = run()
-    print(f"Latency Metrics:")
-    print(f"{'Provider':<20} {'Latency (ms)':<15}")
-    print("-" * 38)
-    print(f"{metrics.provider_name:<20} {metrics.latency_ms:<15.2f}")
+            end = time.time()
+            times.append((end - start) * 1000)
+
+        except Exception as e:
+            print("PQC error:", e)
+
+    if not times:
+        return None
+
+    return sum(times) / len(times)

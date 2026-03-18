@@ -1,0 +1,46 @@
+services:
+  oqs-server:
+    build: ./oqs-server
+    container_name: oqs-server
+    volumes:
+      - ./certs:/app
+    ports:
+      - "9443:9443"
+    networks:
+      - pqc-net
+
+  classical-server:
+    image: alpine
+    container_name: classical-server
+    command: >
+      sh -c "apk add --no-cache openssl &&
+             openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -nodes -subj '/CN=localhost' &&
+             openssl s_server -cert cert.pem -key key.pem -accept 8443 -www -ign_eof"
+    ports:
+      - "8443:8443"
+    networks:
+      - pqc-net
+
+  benchmark:
+    build: .
+    container_name: benchmark
+    depends_on:
+      - oqs-server
+      - classical-server
+    environment:
+      - PQC_HOST=oqs-server
+      - CLASSICAL_HOST=classical-server
+    command: >
+      sh -c "
+      echo 'Waiting for classical...' &&
+      until nc -z classical-server 8443; do sleep 1; done &&
+      echo 'Waiting for oqs...' &&
+      until nc -z oqs-server 9443; do sleep 1; done &&
+      echo 'Running benchmark...' &&
+      python -m benchmark.run_benchmark
+      "
+    networks:
+      - pqc-net
+
+networks:
+  pqc-net:
