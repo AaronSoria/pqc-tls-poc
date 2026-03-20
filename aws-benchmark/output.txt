@@ -1,0 +1,58 @@
+Running TLS Benchmark...
+
+
+Classical TLS
+----------------------------------------
+Runs: 10
+Avg latency: 2.80 ms
+Min latency: 2.52 ms
+Max latency: 4.14 ms
+
+PQC TLS (Hybrid)
+----------------------------------------
+Runs: 10
+Avg latency: 94.88 ms
+Min latency: 94.13 ms
+Max latency: 95.09 ms
+
+Handshake Size (PQC)
+----------------------------------------
+Bytes In : 2409
+Bytes Out: 1572
+
+Overhead
+----------------------------------------
+Latency increase: 92.08 ms
+
+
+
+
+///////////////////////////////////////////////////////
+
+
+
+Running TLS Benchmark...
+
+
+Classical TLS
+----------------------------------------
+Runs: 10
+Avg latency: 2.56 ms
+Min latency: 2.34 ms
+Max latency: 3.12 ms
+
+PQC TLS (Hybrid)
+----------------------------------------
+Runs: 10
+Avg latency: 96.08 ms
+Min latency: 94.79 ms
+Max latency: 102.01 ms
+
+Handshake Size (PQC)
+----------------------------------------
+Bytes In : 2409
+Bytes Out: 1572
+
+Overhead
+----------------------------------------
+Latency increase: 93.52 ms
