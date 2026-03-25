@@ -1,0 +1,339 @@
+# 📘 Bitácora técnica — Benchmark PQC con cuPQC (Taquion)
+
+**Fecha:** 2026-03-25
+**Entorno:** Taquion (Garuda Linux / Arch-based, GPU NVIDIA)
+**Objetivo:** Validar ejecución de ML-KEM en GPU (cuPQC) y comparar con CPU (liboqs)
+
+---
+
+# 1. 🔄 Actualización del sistema
+
+## Comando
+
+```bash
+sudo pacman -Syu
+```
+
+## Problema
+
+Errores de mirrors:
+
+```
+error: failed retrieving file ...
+Operation too slow / timeout
+```
+
+## Solución
+
+Se evitó el uso de `reflector` (fallaba por módulo Python) y se continuó manualmente.
+
+---
+
+# 2. ⚠️ Error con reflector
+
+## Comando
+
+```bash
+sudo reflector --latest 10 --sort rate --save /etc/pacman.d/mirrorlist
+```
+
+## Error
+
+```
+ModuleNotFoundError: No module named 'Reflector'
+```
+
+## Diagnóstico
+
+Instalación rota / entorno Python inconsistente.
+
+## Decisión
+
+👉 No bloquearse. Continuar setup manual.
+
+---
+
+# 3. 🚫 CUDA no disponible
+
+## Comando
+
+```bash
+nvcc --version
+```
+
+## Error
+
+```
+nvcc: command not found
+```
+
+## Solución
+
+Instalación de CUDA:
+
+```bash
+sudo pacman -S cuda
+```
+
+---
+
+# 4. ⚠️ nvcc no en PATH
+
+Después de instalar CUDA:
+
+## Problema
+
+`nvcc` no disponible inmediatamente.
+
+## Solución
+
+Reiniciar sesión o:
+
+```bash
+source /etc/profile
+```
+
+---
+
+# 5. 🧪 Test básico CUDA
+
+## Problema
+
+Error inicial:
+
+```
+test_cuda.cu: No such file or directory
+```
+
+## Solución
+
+Crear archivo manualmente (fish shell no soporta heredoc estándar).
+
+## Compilación
+
+```bash
+nvcc -arch=sm_86 test_cuda.cu -o test_cuda
+```
+
+## Ejecución
+
+```bash
+./test_cuda
+```
+
+## Resultado
+
+```
+Hello from GPU ...
+```
+
+✔ GPU validada
+
+---
+
+# 6. 📦 Clonado cuPQC
+
+```bash
+git clone https://github.com/NVIDIA/cuPQC.git
+cd cuPQC/examples/public_key
+```
+
+---
+
+# 7. ⚠️ Error: pk.hpp no encontrado
+
+## Error
+
+```
+fatal error: pk.hpp: No such file or directory
+```
+
+## Diagnóstico
+
+SDK no instalado o include path incorrecto.
+
+## Solución
+
+Añadir include:
+
+```bash
+-I/usr/local/cupqc-sdk/include/cupqc
+```
+
+---
+
+# 8. ✅ Ejecución exitosa cuPQC
+
+```bash
+./example_ml_kem
+```
+
+## Resultado
+
+✔ ML-KEM funcionando en GPU (keygen / encaps / decaps)
+
+---
+
+# 9. 🔧 Instrumentación de benchmark GPU
+
+Cambios realizados:
+
+* Medición con `std::chrono`
+* Loop de batches:
+
+  ```cpp
+  {1, 8, 32, 128, 512, 2048, 8192}
+  ```
+* Repeticiones (`reps = 5`)
+* Promedio de tiempos
+* Output CSV:
+
+  ```text
+  CSV,<batch>,<op>,<us/op>
+  ```
+
+---
+
+# 10. ⚠️ Errores durante instrumentación
+
+## Error 1 — Markdown corrupto
+
+```
+Function[function::Keygen]
+**global**
+```
+
+## Causa
+
+Símbolos `< >` y `__` dañados por formato.
+
+## Solución
+
+Restaurar:
+
+```cpp
+Function<function::Keygen>
+__global__
+```
+
+---
+
+## Error 2 — CSV incorrecto
+
+Todas las líneas decían:
+
+```
+CSV,<batch>,keygen,...
+```
+
+## Solución
+
+Corregir labels:
+
+```
+keygen / encaps / decaps
+```
+
+---
+
+# 11. 📊 Resultados GPU obtenidos
+
+## Ejemplo (μs/op)
+
+| Batch | Keygen | Encaps | Decaps |
+| ----- | ------ | ------ | ------ |
+| 1     | ~100   | ~99    | ~101   |
+| 8192  | ~0.82  | ~0.96  | ~1.02  |
+
+## Observaciones
+
+* Escalamiento ~100x
+* Saturación a partir de ~2048
+* GPU orientada a throughput
+
+---
+
+# 12. ⚙️ Instalación toolchain CPU
+
+## Error
+
+```
+cmake: command not found
+```
+
+## Solución
+
+```bash
+sudo pacman -S cmake ninja gcc make
+```
+
+---
+
+# 13. 🧠 Build liboqs (CPU baseline)
+
+```bash
+git clone https://github.com/open-quantum-safe/liboqs.git
+cd liboqs
+mkdir build && cd build
+
+cmake -GNinja .. \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DOQS_USE_CUPQC=OFF \
+  -DOQS_MINIMAL_BUILD="KEM_ml_kem_768"
+
+ninja
+```
+
+---
+
+# 14. 📊 Benchmark CPU
+
+```bash
+./tests/speed_kem ML-KEM-768
+```
+
+## Resultados
+
+| Operation | Time (us) |
+| --------- | --------- |
+| keygen    | 9.54      |
+| encaps    | 9.73      |
+| decaps    | 12.25     |
+
+---
+
+# 15. 🔥 Conclusiones técnicas del día
+
+## GPU vs CPU
+
+* CPU mejor en latencia (~10 us vs ~100 us)
+* GPU mejor en throughput (~1 us/op en batch grande)
+
+## Insight clave
+
+> ML-KEM no es el bottleneck del handshake TLS.
+
+## Implicación
+
+* Overhead TLS (~93 ms) dominado por red/protocolo
+* GPU útil solo en escenarios de alta concurrencia
+
+---
+
+# 16. 📌 Estado final
+
+✔ GPU benchmarking funcional
+✔ CPU baseline obtenido
+✔ Comparación completa
+✔ Datos listos para análisis / gráficos / memoria
+
+---
+
+# 17. 🚀 Próximos pasos
+
+* Generación de gráficos
+* Integración en memoria
+* Estructuración del repo
+* Discusión comparativa con TLS
+
+---
