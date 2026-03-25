@@ -1,26 +1,70 @@
 # 🔐 PQC TLS Benchmark — Classical vs Post-Quantum Cryptography (CPU & GPU)
 
-## 📌 Overview
+## 📄 Abstract
 
-This repository presents a **comprehensive experimental evaluation of post-quantum cryptography (PQC)** in the context of TLS, combining:
+This work presents a multi-layer evaluation of post-quantum cryptography (PQC) in TLS, combining protocol-level benchmarks with low-level cryptographic performance analysis on both CPU and GPU platforms.
+
+Experimental results show that hybrid PQC TLS introduces significant latency overhead (~93 ms) during full handshakes, while the underlying cryptographic primitives execute in microseconds. GPU acceleration improves throughput under high concurrency but does not reduce handshake latency.
+
+These findings highlight that the primary performance challenges of PQC adoption lie in protocol design rather than computational cost.
+
+---
+
+# 📌 Overview
+
+This repository presents a **comprehensive experimental evaluation of PQC in TLS**, combining:
 
 * 🔐 Classical TLS (OpenSSL / AWS-LC)
 * 🔐 Hybrid PQC TLS (X25519 + ML-KEM-768)
 * ⚙️ CPU-based PQC primitives (liboqs)
 * 🚀 GPU-accelerated PQC primitives (NVIDIA cuPQC)
 
-The goal is to **quantify the real-world performance impact of PQC**, from protocol-level behavior (TLS handshake) down to cryptographic primitive execution.
+The goal is to **quantify the real-world performance impact of PQC**, from protocol-level behavior down to cryptographic execution.
 
 ---
 
 # 🎯 Research Objectives
 
-This work aims to answer:
-
 1. What is the **performance overhead of PQC in TLS handshakes**?
-2. Is PQC computation itself the **primary bottleneck**?
-3. Can **GPU acceleration (cuPQC)** mitigate PQC overhead?
-4. How do **latency vs throughput trade-offs** behave in PQC systems?
+2. Is PQC computation the **primary bottleneck**?
+3. Can **GPU acceleration (cuPQC)** mitigate PQC cost?
+4. How do **latency vs throughput trade-offs** behave?
+
+---
+
+# 🧾 Execution Environments
+
+| Environment   | Purpose                                        |
+| ------------- | ---------------------------------------------- |
+| **Tempestad** | Functional validation (Docker TLS environment) |
+| **Taquion**   | GPU cryptographic benchmarking (cuPQC)         |
+| **AWS EC2**   | Real-world TLS performance evaluation          |
+
+---
+
+# 💻 Tempestad — Containerized TLS Validation
+
+Local environment used for **functional correctness and reproducibility**.
+
+## System
+
+* Pop!_OS (Ubuntu-based)
+* Docker + Docker Compose
+* Bridge network
+
+## Role
+
+✔ TLS classical + PQC validation
+✔ OpenSSL + liboqs + oqs-provider integration
+✔ Reproducible container setup
+
+## Limitations
+
+* No real network latency
+* No hardware acceleration
+* Self-signed certificates
+
+👉 Used for correctness, **not performance benchmarking**
 
 ---
 
@@ -31,146 +75,175 @@ Client
   │
 Hybrid TLS (X25519 + ML-KEM-768)
   │
-Quantum TLS Gateway / Server
+Gateway / Server
   │
 Backend API
 ```
 
+---
 
+# 🧪 Experimental Setup
+
+## Hardware
+
+**CPU (AWS EC2):**
+
+* t3.micro (x86_64)
+* AVX2 enabled
+
+**GPU (Taquion):**
+
+* NVIDIA GPU (Ampere)
+* CUDA 13.1
+* sm_86
 
 ---
 
-# 🧪 Experimental Design
-
-## 1️⃣ TLS Benchmark (AWS / s2n-tls)
-
-* Full TLS 1.3 handshake (no reuse)
-* Hybrid key exchange: **X25519 + ML-KEM-768**
-* Real network environment (EC2)
-
-### Results
-
-| Metric         | Classical TLS | PQC TLS          |
-| -------------- | ------------- | ---------------- |
-| Latency        | ~2.5–2.8 ms   | ~95–96 ms        |
-| Overhead       | —             | **~93 ms**       |
-| Handshake size | —             | ~2409 bytes (in) |
-
-
-
----
-
-## 2️⃣ CPU Benchmark (liboqs)
-
-Environment:
+## Software
 
 * liboqs v0.15.0
-* AVX2 enabled
 * OpenSSL 3.6
+* oqs-provider
+* cuPQC SDK
+* s2n-tls + AWS-LC
 
-### Results (μs/op)
+---
+
+# 📏 Methodology
+
+## TLS Benchmark (AWS)
+
+* Full TLS 1.3 handshake
+* No session reuse (cold start)
+* Hybrid: X25519 + ML-KEM-768
+
+---
+
+## CPU Benchmark
+
+* Tool: `liboqs speed_kem`
+* ~3s sampling window
+* Mean latency (μs/op)
+
+---
+
+## GPU Benchmark
+
+* CUDA kernel timing
+* `cudaDeviceSynchronize()`
+* 5 repetitions averaged
+* Batch sizes: {1 → 8192}
+
+---
+
+# 📊 Results
+
+## TLS Handshake
+
+| Metric   | Classical | PQC        |
+| -------- | --------- | ---------- |
+| Latency  | ~2.5 ms   | ~95 ms     |
+| Overhead | —         | **~93 ms** |
+
+---
+
+## CPU (ML-KEM-768)
 
 | Operation | Latency  |
 | --------- | -------- |
-| keygen    | 9.56 μs  |
-| encaps    | 9.75 μs  |
-| decaps    | 12.20 μs |
-
-
+| keygen    | 9.54 μs  |
+| encaps    | 9.73 μs  |
+| decaps    | 12.25 μs |
 
 ---
 
-## 3️⃣ GPU Benchmark (NVIDIA cuPQC)
+## GPU (cuPQC)
 
-* CUDA + cuPQC SDK
-* ML-KEM-768
-* Batched execution
+| Mode      | Latency |
+| --------- | ------- |
+| Single op | ~100 μs |
+| Batched   | ~1 μs   |
 
-### Results (μs/op)
+---
 
-| Batch | Keygen   | Encaps   | Decaps   |
-| ----- | -------- | -------- | -------- |
-| 1     | ~100     | ~99      | ~101     |
-| 8192  | **0.82** | **0.96** | **1.02** |
+# 📊 Visualizations
 
+## GPU Scaling
 
+![GPU Scaling](results/gpu_scaling.png)
+
+## CPU vs GPU
+
+![CPU vs GPU](results/cpu_vs_gpu.png)
+
+## TLS vs PQC Cost
+
+![TLS vs PQC](results/tls_vs_pqc.png)
+
+# 🔗 Connecting Results
+
+* TLS benchmark → **protocol + network + crypto**
+* CPU/GPU → **crypto only**
+
+👉 Key insight:
+
+> TLS overhead is dominated by protocol behavior, not cryptographic cost.
 
 ---
 
 # 📊 Key Findings
 
-## 🔴 1. PQC overhead in TLS is significant
+## 🔴 PQC overhead in TLS
 
-* ~93 ms additional latency in full handshake
+* ~93 ms additional latency
 * ~35× slower than classical TLS
 
-👉 However:
+---
 
-> This overhead occurs primarily during **cold handshake** scenarios.
+## 🧠 Cryptography is not the bottleneck
 
+* ML-KEM ≈ 10 μs
+* TLS ≈ 93,000 μs
 
+👉 <0.02% contribution
 
 ---
 
-## 🧠 2. Cryptography is NOT the bottleneck
+## ⚠️ GPU trade-off
 
-Compare:
-
-* ML-KEM (CPU): ~10 μs
-* TLS overhead: ~93,000 μs
-
-👉 PQC computation accounts for:
-
-```text
-< 0.02% of total handshake latency
-```
+| Metric     | Result        |
+| ---------- | ------------- |
+| Latency    | ❌ worse       |
+| Throughput | ✅ ~10× better |
 
 ---
 
-## ⚠️ 3. GPU does NOT improve latency
+## 💡 Core Insight
 
-| Scenario         | GPU Performance     |
-| ---------------- | ------------------- |
-| Single operation | ❌ Worse (~100 μs)   |
-| Batched (8192)   | ✅ Excellent (~1 μs) |
-
-👉 GPU is **throughput-oriented**, not latency-oriented.
+> Accelerating cryptography does not reduce TLS latency.
 
 ---
 
-## 🚀 4. GPU enables massive scalability
+# ⚠️ Limitations
 
-Approximate throughput:
-
-* CPU: ~100K ops/sec
-* GPU: ~1M ops/sec
-
-👉 ~10× improvement in high-concurrency environments
+* GPU excludes memory transfer overhead
+* TLS measured in cold-start mode
+* No session reuse
+* Network latency not isolated
 
 ---
 
-## 💡 5. Critical Insight
+# 📈 Practical Implications
 
-> Accelerating PQC primitives does NOT reduce TLS handshake latency.
+## GPU useful for
 
-Instead:
+✔ High-throughput TLS termination
+✔ CDN / edge nodes
 
-* TLS overhead is dominated by:
+## Not useful for
 
-  * network latency
-  * message size
-  * protocol orchestration
-
----
-
-# 🧠 Interpretation
-
-This work demonstrates a key distinction:
-
-| Layer                    | Impact            |
-| ------------------------ | ----------------- |
-| Cryptographic primitives | Low latency cost  |
-| Protocol (TLS)           | High latency cost |
+❌ Single handshake latency
+❌ low-latency systems
 
 ---
 
@@ -178,11 +251,13 @@ This work demonstrates a key distinction:
 
 ```text
 .
-├── gpu/                # cuPQC benchmarks
-├── cpu/                # liboqs baseline
-├── docker/             # TLS benchmark environment
-├── results/            # experimental outputs
-├── docs/               # bitácora + notes
+├── aws-benchmark/
+├── cpu/
+├── gpu/
+├── gateway/
+├── docker/
+├── results/
+├── docs/
 └── README.md
 ```
 
@@ -190,89 +265,34 @@ This work demonstrates a key distinction:
 
 # 🚀 Reproducibility
 
-## GPU Benchmark
-
 ```bash
-cd gpu
-./build.sh
-./run.sh
-```
+# GPU
+cd gpu && ./build.sh && ./run.sh
 
----
+# CPU
+cd cpu && ./build.sh && ./run_cpu.sh
 
-## CPU Benchmark
-
-```bash
-cd cpu
-./build.sh
-./run_cpu.sh
-```
-
----
-
-## TLS Benchmark
-
-```bash
+# TLS
 docker compose up --build
 ```
 
 ---
 
-# ⚠️ Methodological Notes
-
-* GPU measurements correspond to **kernel execution only**
-* TLS benchmarks measure **full handshake latency**
-* No session reuse (worst-case scenario)
-* Results emphasize **cold-start performance**
-
----
-
-# 📈 Practical Implications
-
-## Where GPU helps
-
-✔ TLS termination at scale
-✔ CDN edge nodes
-✔ high-throughput APIs
-
----
-
-## Where GPU does NOT help
-
-❌ Individual TLS handshakes
-❌ latency-sensitive connections
-
----
-
 # 🔮 Future Work
 
-* Integration with **AWS KMS PQC endpoints**
-* End-to-end TLS proxy architecture (crypto-agility)
-* Throughput benchmarking under real load
-* CUDA optimization (memory + streams)
-
-
+* PQC TLS proxy (crypto-agility)
+* Throughput under real load
+* CUDA optimization
 
 ---
 
 # 🏁 Conclusion
 
-This project provides a **multi-layer evaluation of PQC systems**, demonstrating that:
+* PQC introduces **protocol-level overhead**
+* Cryptography cost is negligible
+* GPU improves throughput, not latency
 
-* PQC introduces **significant protocol-level overhead**
-* Cryptographic computation is **not the limiting factor**
-* GPU acceleration is effective only under **high parallelism**
-
-> The transition to PQC requires **protocol-level optimization**, not just faster cryptography.
-
----
-
-# 📚 References
-
-* Open Quantum Safe (liboqs)
-* AWS s2n-tls / AWS-LC
-* NVIDIA cuPQC
-* NIST FIPS 203 (ML-KEM)
+> PQC adoption requires protocol optimization, not faster primitives.
 
 ---
 
