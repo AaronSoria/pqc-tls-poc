@@ -1,230 +1,283 @@
-# 🧪 PQC TLS POC – Benchmark TLS Clásico vs Post-Cuántico
+# 🔐 PQC TLS Benchmark — Classical vs Post-Quantum Cryptography (CPU & GPU)
 
-## 📌 Descripción
+## 📌 Overview
 
-Este proyecto implementa un entorno reproducible para evaluar el rendimiento de:
+This repository presents a **comprehensive experimental evaluation of post-quantum cryptography (PQC)** in the context of TLS, combining:
 
-* 🔐 TLS clásico (OpenSSL)
-* 🔐 TLS híbrido post-cuántico (OpenSSL + liboqs + oqs-provider)
+* 🔐 Classical TLS (OpenSSL / AWS-LC)
+* 🔐 Hybrid PQC TLS (X25519 + ML-KEM-768)
+* ⚙️ CPU-based PQC primitives (liboqs)
+* 🚀 GPU-accelerated PQC primitives (NVIDIA cuPQC)
 
-El objetivo es medir el impacto del uso de criptografía post-cuántica (PQC) en el **handshake TLS** y comparar métricas como latencia.
+The goal is to **quantify the real-world performance impact of PQC**, from protocol-level behavior (TLS handshake) down to cryptographic primitive execution.
 
 ---
 
-# 🏗️ Arquitectura
+# 🎯 Research Objectives
+
+This work aims to answer:
+
+1. What is the **performance overhead of PQC in TLS handshakes**?
+2. Is PQC computation itself the **primary bottleneck**?
+3. Can **GPU acceleration (cuPQC)** mitigate PQC overhead?
+4. How do **latency vs throughput trade-offs** behave in PQC systems?
+
+---
+
+# 🏗️ System Architecture
 
 ```text
-benchmark (cliente)
-   ├── classical-server (TLS clásico)
-   └── oqs-server (TLS híbrido PQC)
+Client
+  │
+Hybrid TLS (X25519 + ML-KEM-768)
+  │
+Quantum TLS Gateway / Server
+  │
+Backend API
 ```
 
----
 
-# ⚙️ Requisitos
-
-* Docker ≥ 24
-* Docker Compose ≥ v2
-* Linux recomendado (probado en Ubuntu / Pop!_OS)
 
 ---
 
-# 🚀 Cómo ejecutar
+# 🧪 Experimental Design
 
-## 1️⃣ Clonar el repositorio
+## 1️⃣ TLS Benchmark (AWS / s2n-tls)
 
-```bash
-git clone <repo-url>
-cd pqc-tls-poc
-```
+* Full TLS 1.3 handshake (no reuse)
+* Hybrid key exchange: **X25519 + ML-KEM-768**
+* Real network environment (EC2)
 
----
+### Results
 
-## 2️⃣ Construir imágenes
+| Metric         | Classical TLS | PQC TLS          |
+| -------------- | ------------- | ---------------- |
+| Latency        | ~2.5–2.8 ms   | ~95–96 ms        |
+| Overhead       | —             | **~93 ms**       |
+| Handshake size | —             | ~2409 bytes (in) |
 
-```bash
-docker compose build --no-cache
-```
 
-> ⚠️ La build puede tardar varios minutos debido a la compilación de:
->
-> * OpenSSL
-> * liboqs
-> * oqs-provider
 
 ---
 
-## 3️⃣ Ejecutar el entorno
+## 2️⃣ CPU Benchmark (liboqs)
 
-```bash
-docker compose up
-```
+Environment:
+
+* liboqs v0.15.0
+* AVX2 enabled
+* OpenSSL 3.6
+
+### Results (μs/op)
+
+| Operation | Latency  |
+| --------- | -------- |
+| keygen    | 9.56 μs  |
+| encaps    | 9.75 μs  |
+| decaps    | 12.20 μs |
+
+
 
 ---
 
-## 4️⃣ Qué sucede al ejecutar
+## 3️⃣ GPU Benchmark (NVIDIA cuPQC)
 
-El sistema realiza automáticamente:
+* CUDA + cuPQC SDK
+* ML-KEM-768
+* Batched execution
+
+### Results (μs/op)
+
+| Batch | Keygen   | Encaps   | Decaps   |
+| ----- | -------- | -------- | -------- |
+| 1     | ~100     | ~99      | ~101     |
+| 8192  | **0.82** | **0.96** | **1.02** |
+
+
+
+---
+
+# 📊 Key Findings
+
+## 🔴 1. PQC overhead in TLS is significant
+
+* ~93 ms additional latency in full handshake
+* ~35× slower than classical TLS
+
+👉 However:
+
+> This overhead occurs primarily during **cold handshake** scenarios.
+
+
+
+---
+
+## 🧠 2. Cryptography is NOT the bottleneck
+
+Compare:
+
+* ML-KEM (CPU): ~10 μs
+* TLS overhead: ~93,000 μs
+
+👉 PQC computation accounts for:
 
 ```text
-1. Levanta classical-server (TLS clásico)
-2. Levanta oqs-server (TLS PQC)
-3. Espera a que ambos estén disponibles
-4. Ejecuta benchmark
-5. Muestra resultados en consola
+< 0.02% of total handshake latency
 ```
 
 ---
 
-## 📊 Output esperado
+## ⚠️ 3. GPU does NOT improve latency
+
+| Scenario         | GPU Performance     |
+| ---------------- | ------------------- |
+| Single operation | ❌ Worse (~100 μs)   |
+| Batched (8192)   | ✅ Excellent (~1 μs) |
+
+👉 GPU is **throughput-oriented**, not latency-oriented.
+
+---
+
+## 🚀 4. GPU enables massive scalability
+
+Approximate throughput:
+
+* CPU: ~100K ops/sec
+* GPU: ~1M ops/sec
+
+👉 ~10× improvement in high-concurrency environments
+
+---
+
+## 💡 5. Critical Insight
+
+> Accelerating PQC primitives does NOT reduce TLS handshake latency.
+
+Instead:
+
+* TLS overhead is dominated by:
+
+  * network latency
+  * message size
+  * protocol orchestration
+
+---
+
+# 🧠 Interpretation
+
+This work demonstrates a key distinction:
+
+| Layer                    | Impact            |
+| ------------------------ | ----------------- |
+| Cryptographic primitives | Low latency cost  |
+| Protocol (TLS)           | High latency cost |
+
+---
+
+# ⚙️ Repository Structure
 
 ```text
-Provider             Latency (ms)
------------------------------------
-Classical TLS        ~2.0
-PQC TLS              ~3.5
-```
-
-> ⚠️ Los valores pueden variar según hardware
-
----
-
-# 🧪 Detalles técnicos
-
-## 🔸 TLS Clásico
-
-* OpenSSL estándar
-* RSA 2048
-* Handshake tradicional
-
----
-
-## 🔸 TLS PQC
-
-* OpenSSL compilado manualmente
-* liboqs integrado
-* oqs-provider cargado dinámicamente
-* Grupo híbrido utilizado:
-
-```text
-X25519MLKEM768
+.
+├── gpu/                # cuPQC benchmarks
+├── cpu/                # liboqs baseline
+├── docker/             # TLS benchmark environment
+├── results/            # experimental outputs
+├── docs/               # bitácora + notes
+└── README.md
 ```
 
 ---
 
-## 🔸 Benchmark
+# 🚀 Reproducibility
 
-* Implementado en Python
-* Mide:
-
-  * tiempo de conexión TCP + handshake TLS
-* Ejecuta:
-
-  * cliente clásico (socket + ssl)
-  * cliente PQC (openssl s_client)
-
----
-
-# 🧰 Comandos útiles
-
-## 🔹 Ver logs
+## GPU Benchmark
 
 ```bash
-docker compose logs -f
+cd gpu
+./build.sh
+./run.sh
 ```
 
 ---
 
-## 🔹 Reiniciar entorno
+## CPU Benchmark
 
 ```bash
-docker compose down
+cd cpu
+./build.sh
+./run_cpu.sh
+```
+
+---
+
+## TLS Benchmark
+
+```bash
 docker compose up --build
 ```
 
 ---
 
-## 🔹 Ejecutar benchmark manualmente
+# ⚠️ Methodological Notes
 
-```bash
-docker compose exec benchmark python -m benchmark.run_benchmark
-```
-
----
-
-# ⚠️ Problemas conocidos
-
-## ❌ Error: provider no carga
-
-Verificar:
-
-```bash
-echo $OPENSSL_MODULES
-```
-
-Debe ser:
-
-```text
-/usr/local/lib/ossl-modules
-```
+* GPU measurements correspond to **kernel execution only**
+* TLS benchmarks measure **full handshake latency**
+* No session reuse (worst-case scenario)
+* Results emphasize **cold-start performance**
 
 ---
 
-## ❌ Error: conexión rechazada
+# 📈 Practical Implications
 
-Puede deberse a:
+## Where GPU helps
 
-* servidores no listos
-* falta de espera inicial
-
-Solución: aumentar delay en benchmark
-
----
-
-## ❌ Error: grupos PQC no reconocidos
-
-Usar:
-
-```text
-X25519MLKEM768
-```
-
-No usar:
-
-```text
-kyber512 ❌
-```
+✔ TLS termination at scale
+✔ CDN edge nodes
+✔ high-throughput APIs
 
 ---
 
-# 📁 Estructura del proyecto
+## Where GPU does NOT help
 
-```text
-.
-├── docker-compose.yml
-├── oqs-server/
-│   └── Dockerfile
-├── benchmark/
-│   ├── run_benchmark.py
-│   └── client/
-│       ├── classical_client.py
-│       └── pqc_client.py
-```
+❌ Individual TLS handshakes
+❌ latency-sensitive connections
 
 ---
 
-# 📈 Próximos pasos
+# 🔮 Future Work
 
-* Integración con AWS (s2n-tls, AWS-LC)
-* Benchmark en infraestructura real (EC2)
-* Validación con AWS KMS
-* Observabilidad con CloudWatch
-* Evaluación de aceleración con NVIDIA (CUDA)
+* Integration with **AWS KMS PQC endpoints**
+* End-to-end TLS proxy architecture (crypto-agility)
+* Throughput benchmarking under real load
+* CUDA optimization (memory + streams)
+
+
 
 ---
 
-# 🏁 Conclusión
+# 🏁 Conclusion
 
-Este entorno permite evaluar de forma controlada el impacto de la criptografía post-cuántica en TLS, sirviendo como base para pruebas más avanzadas en entornos reales.
+This project provides a **multi-layer evaluation of PQC systems**, demonstrating that:
+
+* PQC introduces **significant protocol-level overhead**
+* Cryptographic computation is **not the limiting factor**
+* GPU acceleration is effective only under **high parallelism**
+
+> The transition to PQC requires **protocol-level optimization**, not just faster cryptography.
+
+---
+
+# 📚 References
+
+* Open Quantum Safe (liboqs)
+* AWS s2n-tls / AWS-LC
+* NVIDIA cuPQC
+* NIST FIPS 203 (ML-KEM)
+
+---
+
+# 👤 Author
+
+Aaron Soria
 
 ---
