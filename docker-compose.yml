@@ -21,21 +21,63 @@ services:
     networks:
       - pqc-net
 
+  aws-lc-tools:
+    build:
+      context: ./aws-lc-tools
+    container_name: aws-lc-tools
+    command: >
+      sh -c "
+      echo 'AWS-LC tool container ready' &&
+      /opt/aws-lc/build/tool/bssl version &&
+      tail -f /dev/null
+      "
+    networks:
+      - pqc-net
+
+  aws-pq-server:
+    build:
+      context: ./aws-pq-server
+    container_name: aws-pq-server
+    volumes:
+      - ./certs:/certs
+    ports:
+      - '10443:10443'
+    command: >
+      sh -c "
+      if [ ! -f /certs/aws-s2n-cert.pem ] || [ ! -f /certs/aws-s2n-key.pem ]; then
+        openssl req -x509 -newkey rsa:2048 -nodes \
+          -keyout /certs/aws-s2n-key.pem \
+          -out /certs/aws-s2n-cert.pem \
+          -days 1 \
+          -subj '/CN=localhost';
+      fi &&
+      echo 'Starting s2n PQ server on 10443...' &&
+      /opt/s2n-tls/build/bin/s2nd default_pq 10443 \
+        --cert /certs/aws-s2n-cert.pem \
+        --key /certs/aws-s2n-key.pem
+      "
+    networks:
+      - pqc-net
+
   benchmark:
     build: .
     container_name: benchmark
     depends_on:
       - oqs-server
       - classical-server
+      - aws-pq-server
     environment:
       - PQC_HOST=oqs-server
       - CLASSICAL_HOST=classical-server
+      - AWS_PQ_HOST=aws-pq-server
     command: >
       sh -c "
       echo 'Waiting for classical...' &&
       until nc -z classical-server 8443; do sleep 1; done &&
       echo 'Waiting for oqs...' &&
       until nc -z oqs-server 9443; do sleep 1; done &&
+      echo 'Waiting for aws-pq...' &&
+      until nc -z aws-pq-server 10443; do sleep 1; done &&
       echo 'Running benchmark...' &&
       python -m benchmark.run_benchmark
       "

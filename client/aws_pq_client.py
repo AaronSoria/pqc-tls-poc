@@ -3,7 +3,7 @@ import time
 import statistics
 
 
-def run(host="oqs-server", port=9443, iterations=10):
+def run(host="aws-pq-server", port=10443, iterations=10):
     times = []
 
     for _ in range(iterations):
@@ -12,14 +12,13 @@ def run(host="oqs-server", port=9443, iterations=10):
         try:
             subprocess.run(
                 [
-                    "openssl",
-                    "s_client",
-                    "-connect", f"{host}:{port}",
-                    "-groups", "X25519MLKEM768",
-                    "-provider", "default",
-                    "-provider", "oqsprovider"
+                    "s2nc",
+                    "--insecure",
+                    "--ciphers", "default_pq",
+                    host,
+                    str(port)
                 ],
-                input=b"Q",
+                input=b"GET /\n",
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 timeout=5
@@ -29,7 +28,7 @@ def run(host="oqs-server", port=9443, iterations=10):
             times.append((end - start) * 1000)
 
         except Exception as e:
-            print("PQC error:", e)
+            print("AWS PQ error:", e)
 
     if not times:
         return None
