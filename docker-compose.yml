@@ -13,9 +13,11 @@ services:
     image: alpine
     container_name: classical-server
     command: >
-      sh -c "apk add --no-cache openssl &&
-             openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -nodes -subj '/CN=localhost' &&
-             openssl s_server -cert cert.pem -key key.pem -accept 8443 -www -ign_eof"
+      sh -c "
+      apk add --no-cache openssl &&
+      openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -nodes -subj '/CN=localhost' &&
+      openssl s_server -cert cert.pem -key key.pem -accept 8443 -www -ign_eof
+      "
     ports:
       - "8443:8443"
     networks:
@@ -41,7 +43,7 @@ services:
     volumes:
       - ./certs:/certs
     ports:
-      - '10443:10443'
+      - "10443:10443"
     command: >
       sh -c "
       if [ ! -f /certs/aws-s2n-cert.pem ] || [ ! -f /certs/aws-s2n-key.pem ]; then
@@ -67,9 +69,15 @@ services:
       - classical-server
       - aws-pq-server
     environment:
-      - PQC_HOST=oqs-server
-      - CLASSICAL_HOST=classical-server
-      - AWS_PQ_HOST=aws-pq-server
+      CLASSICAL_HOST: classical-server
+      CLASSICAL_PORT: 8443
+      PQC_HOST: oqs-server
+      PQC_PORT: 9443
+      AWS_PQ_HOST: aws-pq-server
+      AWS_PQ_PORT: 10443
+      ITERATIONS: 10
+    volumes:
+      - ./results:/app/results
     command: >
       sh -c "
       echo 'Waiting for classical...' &&
@@ -79,7 +87,7 @@ services:
       echo 'Waiting for aws-pq...' &&
       until nc -z aws-pq-server 10443; do sleep 1; done &&
       echo 'Running benchmark...' &&
-      python -m benchmark.run_benchmark
+      python3 -m benchmark.run_benchmark
       "
     networks:
       - pqc-net
