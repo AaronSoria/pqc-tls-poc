@@ -206,3 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 .aider*
+certs/aws-s2n-cert.pem
+.gitignore
+certs/aws-s2n-key.pem

@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
     openssl \
+    socat \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -L "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz && \
@@ -43,3 +44,6 @@ RUN git clone https://github.com/aws/s2n-tls.git && \
     ninja
 
 CMD ["bash"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
