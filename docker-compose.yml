@@ -23,19 +23,6 @@ services:
     networks:
       - pqc-net
 
-  aws-lc-tools:
-    build:
-      context: ./aws-lc-tools
-    container_name: aws-lc-tools
-    command: >
-      sh -c "
-      echo 'AWS-LC tool container ready' &&
-      /opt/aws-lc/build/tool/bssl version &&
-      tail -f /dev/null
-      "
-    networks:
-      - pqc-net
-
   aws-pq-server:
     build:
       context: ./aws-pq-server
@@ -48,7 +35,9 @@ services:
       - pqc-net
 
   benchmark:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.benchmark
     container_name: benchmark
     depends_on:
       - oqs-server
@@ -61,21 +50,17 @@ services:
       PQC_PORT: 9443
       AWS_PQ_HOST: aws-pq-server
       AWS_PQ_PORT: 10443
-      AWS_PQ_HOST_OPTIMIZED: aws-pq-server
-      AWS_PQ_PORT_OPTIMIZED: 10443
-      ITERATIONS: 10
+      ITERATIONS: 20
     volumes:
-      - ./results:/app/results
+      - ./results:/results
     command: >
       sh -c "
-      echo 'Waiting for classical...' &&
+      echo 'Waiting for servers...' &&
       until nc -z classical-server 8443; do sleep 1; done &&
-      echo 'Waiting for oqs...' &&
       until nc -z oqs-server 9443; do sleep 1; done &&
-      echo 'Waiting for aws-pq...' &&
       until nc -z aws-pq-server 10443; do sleep 1; done &&
-      echo 'Running benchmark...' &&
-      python3 -m benchmark.run_benchmark
+      echo 'All servers ready. Running benchmark...' &&
+      /usr/local/bin/benchmark
       "
     networks:
       - pqc-net
