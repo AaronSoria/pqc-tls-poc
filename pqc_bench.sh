@@ -655,4 +655,21 @@ main() {
 
     # Setup completo
     phase_sys_deps
-    phase
+    phase_cuda
+    phase_go
+    phase_awslc
+    phase_s2n
+    phase_oqs_openssl
+    phase_oqs_provider
+    phase_pqc_bench_go
+    phase_build_gpu_bench
+    phase_certs
+    start_servers
+    run_tls_bench
+    cleanup
+    run_cpu_bench
+    run_gpu_bench
+    print_summary
+}
+
+main "$@"
