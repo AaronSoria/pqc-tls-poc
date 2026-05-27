@@ -209,3 +209,8 @@ __marimo__/
 certs/aws-s2n-cert.pem
 .gitignore
 certs/aws-s2n-key.pem
+
+# PQC benchmark - runtime artifacts
+certs/*.pem
+certs/*.key
+.pqc_phases
