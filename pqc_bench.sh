@@ -438,7 +438,10 @@ phase_build_gpu_bench() {
     CUPQC_LIB=$(find "$CUPQC_SDK/lib" -name "libcupqc-pk*.a" | head -1)
     [[ -z "$CUPQC_LIB" ]] && err "No se encontró libcupqc-pk*.a en $CUPQC_SDK/lib"
 
-    nvcc -std=c++17 -O3 -dlto -arch="$GPU_ARCH" \
+    # -rdc=true: Relocatable Device Code — permite externs de device no resueltos
+    # durante compilación; nvlink los resuelve al linkear con la .a de cuPQC.
+    # Funciona en CUDA 11.x y 12.x (más robusto que -dlto solo).
+    nvcc -std=c++17 -O3 -rdc=true -dlto -arch="$GPU_ARCH" \
         -I"$CUPQC_SDK/include" \
         -I"$CUPQC_SDK/include/cupqc" \
         "$SCRIPT_DIR/gpu/bench_mlkem_gpu.cu" \
@@ -652,28 +655,4 @@ main() {
 
     # Setup completo
     phase_sys_deps
-    phase_cuda
-    phase_go
-    phase_awslc
-    phase_s2n
-    phase_oqs_stack
-    phase_liboqs_bench
-    phase_certs
-    phase_build_go_bench
-    phase_build_gpu_bench
-
-    echo ""
-    log "Setup completo. Iniciando benchmarks..."
-    echo ""
-
-    start_servers
-    run_tls_bench
-    cleanup
-
-    run_cpu_bench
-    run_gpu_bench
-
-    print_summary
-}
-
-main "$@"
+    phase
