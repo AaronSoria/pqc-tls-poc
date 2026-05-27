@@ -431,11 +431,18 @@ phase_build_gpu_bench() {
     export PATH="/usr/local/cuda/bin:$PATH"
     command -v nvcc &>/dev/null || err "nvcc no encontrado"
 
-    nvcc -std=c++17 -O3 -arch="$GPU_ARCH" \
+    # cuPQC usa device-side LTO (NVVM bitcode en la .a).
+    # Pasar la ruta completa de la .a directamente en lugar de -L/-l
+    # para que nvcc exponga el IR al device linker correctamente.
+    local CUPQC_LIB
+    CUPQC_LIB=$(find "$CUPQC_SDK/lib" -name "libcupqc-pk*.a" | head -1)
+    [[ -z "$CUPQC_LIB" ]] && err "No se encontró libcupqc-pk*.a en $CUPQC_SDK/lib"
+
+    nvcc -std=c++17 -O3 -dlto -arch="$GPU_ARCH" \
         -I"$CUPQC_SDK/include" \
         -I"$CUPQC_SDK/include/cupqc" \
-        -L"$CUPQC_SDK/lib" -lcupqc-pk \
         "$SCRIPT_DIR/gpu/bench_mlkem_gpu.cu" \
+        "$CUPQC_LIB" \
         -o "$BIN/pqc-bench-gpu"
 
     mark_done gpu_bench
