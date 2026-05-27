@@ -1,0 +1,24 @@
+
+🚀 PQC TLS Benchmark (Go) — 50 iterations per stack
+
+Stack                        Latency
+---------------------------------------------------------------------------------------------
+Classical TLS (RSA-2048)       1.17 ms (mean) |   1.16 p50 |   1.22 p95 |   1.13 min |   1.42 max | ok=50 fail=0
+OQS PQC (X25519MLKEM768)      25.14 ms (mean) |  28.72 p50 |  29.36 p95 |  18.44 min |  29.45 max | ok=50 fail=0
+AWS PQ (s2n + AWS-LC)         29.16 ms (mean) |  29.31 p50 |  29.51 p95 |  22.38 min |  29.57 max | ok=50 fail=0
+---------------------------------------------------------------------------------------------
+
+Phase breakdown — P50 / P95 (ms)
+Stack                         init                dial (TCP)          handshake (TLS)     total             
+──────────────────────────────────────────────────────────────────────────────────────────────
+Classical TLS (RSA-2048)      0.000 / 0.005       0.059 / 0.068       1.098 / 1.149       1.158 / 1.218     
+OQS PQC (X25519MLKEM768)      2.616 / 2.616 *est  0.000 / 0.000       26.099 / 26.741     28.716 / 29.357   
+AWS PQ (s2n + AWS-LC)         0.089 / 0.093       0.109 / 0.113       29.110 / 29.313     29.308 / 29.514   
+──────────────────────────────────────────────────────────────────────────────────────────────
+
+Notes:
+  Classical : init = tls.Client() wrap; dial = net.Dial; handshake = crypto/tls TLS 1.3
+  AWS PQ    : init = s2n_config+conn setup; dial = TCP connect; handshake = s2n_negotiate
+  OQS PQC   : init = subprocess fork+exec overhead (openssl version baseline);
+              dial folded into subprocess (not isolatable without CGO bindings);
+              handshake* = total - subprocess overhead (estimate)

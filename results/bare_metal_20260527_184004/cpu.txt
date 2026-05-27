@@ -1,0 +1,23 @@
+Configuration info
+==================
+Target platform:  x86_64-Linux-5.15.0-179-generic
+Compiler:         gcc (11.4.0)
+Compile options:  [-Wa,--noexecstack;-fomit-frame-pointer;-fdata-sections;-ffunction-sections;-Wl,--gc-sections;-Wbad-function-cast]
+OQS version:      0.15.0 (major: 0, minor: 15, patch: 0)
+Git commit:       unknown
+OpenSSL enabled:  Yes (OpenSSL 3.0.2 15 Mar 2022)
+AES:              NI
+SHA-2:            OpenSSL
+SHA-3:            AVX2
+OQS build flags:  OQS_DIST_BUILD OQS_LIBJADE_BUILD OQS_OPT_TARGET=generic CMAKE_BUILD_TYPE=Release 
+CPU exts active:  ADX AES AVX AVX2 BMI1 BMI2 PCLMULQDQ POPCNT SSE SSE2 SSE3
+Speed test
+==========
+Started at 2026-05-27 18:40:07
+Operation                            | Iterations | Total time (s) | Time (us): mean | pop. stdev | CPU cycles: mean          | pop. stdev
+------------------------------------ | ----------:| --------------:| ---------------:| ----------:| -------------------------:| ----------:
+ML-KEM-768                           |            |                |                 |            |                           |           
+keygen                               |     273580 |          3.000 |          10.966 |      4.182 |                     37134 |      14133
+encaps                               |     265148 |          3.000 |          11.314 |      0.476 |                     38316 |        396
+decaps                               |     229318 |          3.000 |          13.082 |      0.294 |                     44313 |        447
+Ended at 2026-05-27 18:40:16
