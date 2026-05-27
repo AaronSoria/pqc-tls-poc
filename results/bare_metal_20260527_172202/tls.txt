@@ -1,0 +1,14 @@
+
+🚀 PQC TLS Benchmark (Go) — 50 iterations per stack
+
+Stack                        Latency
+---------------------------------------------------------------------------------------------
+Classical TLS (RSA-2048)       1.18 ms (mean) |   1.17 p50 |   1.23 p95 |   1.15 min |   1.44 max | ok=50 fail=0
+OQS PQC (X25519MLKEM768)      34.33 ms (mean) |  38.47 p50 |  38.82 p95 |  22.48 min |  39.10 max | ok=50 fail=0
+AWS PQ (s2n + AWS-LC)         29.36 ms (mean) |  29.41 p50 |  29.57 p95 |  28.73 min |  29.60 max | ok=50 fail=0
+---------------------------------------------------------------------------------------------
+
+Notas:
+  Classical : crypto/tls Go nativo — sin subprocess, medición directa del handshake
+  OQS       : subprocess openssl s_client — incluye overhead de proceso (~1-2ms)
+  AWS PQ    : CGO contra libs2n/AWS-LC — sin subprocess, medición directa del handshake
