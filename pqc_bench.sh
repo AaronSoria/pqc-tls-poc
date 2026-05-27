@@ -107,8 +107,8 @@ phase_sys_deps() {
 phase_cuda() {
     phase "Fase 1 - NVIDIA Driver + CUDA ${CUDA_PKG}"
     is_done cuda && {
-        export PATH="/usr/local/cuda/bin:$PATH"
-        export LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
+        export PATH="/usr/local/cuda-12.6/bin:/usr/local/cuda/bin:$PATH"
+        export LD_LIBRARY_PATH="/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
         log "CUDA ya instalado, saltando"
         return
     }
@@ -116,8 +116,8 @@ phase_cuda() {
     if nvidia-smi &>/dev/null; then
         log "Driver NVIDIA activo:"
         nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
-        export PATH="/usr/local/cuda/bin:$PATH"
-        export LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
+        export PATH="/usr/local/cuda-12.6/bin:/usr/local/cuda/bin:$PATH"
+        export LD_LIBRARY_PATH="/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
         if ! command -v nvcc &>/dev/null; then
             warn "nvcc no encontrado - instalando CUDA toolkit..."
             apt-get install -y "$CUDA_PKG" 2>/dev/null || true
@@ -428,7 +428,7 @@ phase_build_gpu_bench() {
 
     is_done gpu_bench && { log "GPU benchmark ya compilado, saltando"; return; }
 
-    export PATH="/usr/local/cuda/bin:$PATH"
+    export PATH="/usr/local/cuda-12.6/bin:/usr/local/cuda/bin:$PATH"
     command -v nvcc &>/dev/null || err "nvcc no encontrado"
 
     # cuPQC usa device-side LTO (NVVM bitcode en la .a).
@@ -562,8 +562,8 @@ run_gpu_bench() {
     fi
 
     mkdir -p "$RESULTS_DIR"
-    export PATH="/usr/local/cuda/bin:$PATH"
-    export LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
+    export PATH="/usr/local/cuda-12.6/bin:/usr/local/cuda/bin:$PATH"
+    export LD_LIBRARY_PATH="/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
     [[ -d "$CUPQC_SDK/lib" ]] && export LD_LIBRARY_PATH="$CUPQC_SDK/lib:$LD_LIBRARY_PATH"
 
     info "GPU: $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null | head -1)"
@@ -633,7 +633,7 @@ main() {
 
     if [[ "$mode" == "--gpu-only" ]]; then
         export PATH="/usr/local/cuda/bin:/usr/local/bin:$PATH"
-        export LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
+        export LD_LIBRARY_PATH="/usr/local/cuda-12.6/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}"
         phase_build_gpu_bench
         run_gpu_bench
         print_summary
